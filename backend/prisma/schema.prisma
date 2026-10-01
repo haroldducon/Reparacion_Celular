@@ -1,0 +1,277 @@
+// ============================================================================
+// Schema Prisma - Plataforma de Reparación de Celulares
+// Multi-tenant (RLS a nivel de Postgres), auditable, listo para reportes async
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// Enums
+// ----------------------------------------------------------------------------
+
+enum Rol {
+  SUPER_ADMIN // comercializador / dueño del producto (sin tenantId)
+  ADMIN       // dueño del taller
+  TECNICO     // repara y también puede recepcionar/entregar
+  RECEPCION   // recibe y entrega equipos
+}
+
+enum EstadoOrden {
+  RECEPCION
+  DIAGNOSTICO
+  EN_REPARACION
+  REPARADO
+  ENTREGADO
+  CANCELADO
+}
+
+enum EstadoPresupuesto {
+  PENDIENTE
+  ACEPTADO
+  RECHAZADO
+}
+
+enum TipoFoto {
+  RECEPCION
+  DIAGNOSTICO
+  REPARACION
+  ENTREGA
+}
+
+enum EstadoReporteIA {
+  PENDIENTE
+  PROCESANDO
+  COMPLETADO
+  ERROR
+}
+
+enum EstadoEmail {
+  PENDIENTE
+  ENVIADO
+  ERROR
+}
+
+// ----------------------------------------------------------------------------
+// Tenant / Usuarios
+// ----------------------------------------------------------------------------
+
+model Tenant {
+  id        String   @id @default(uuid())
+  nombre    String
+  nit       String?
+  activo    Boolean  @default(true)
+  plan      String   @default("local") // reservado para futura distribución/comercialización
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuarios  Usuario[]
+  clientes  Cliente[]
+  ordenes   OrdenReparacion[]
+  auditLogs AuditLog[]
+  reportesIA ReporteIA[]
+  emails    EmailLog[]
+
+  @@map("tenants")
+}
+
+model Usuario {
+  id           String   @id @default(uuid())
+  // null solo para SUPER_ADMIN (no pertenece a un taller específico)
+  tenantId     String?
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String   @unique
+  passwordHash String
+  nombre       String
+  rol          Rol
+  activo       Boolean  @default(true)
+  ultimoLogin  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ordenesComoTecnico     OrdenReparacion[] @relation("tecnico")
+  ordenesComoRecepcion   OrdenReparacion[] @relation("recepcionista")
+  historial              HistorialEstado[]
+  auditLogs              AuditLog[]
+  reportesIASolicitados  ReporteIA[]
+
+  @@index([tenantId])
+  @@map("usuarios")
+}
+
+// ----------------------------------------------------------------------------
+// Clientes / Órdenes
+// ----------------------------------------------------------------------------
+
+model Cliente {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre    String
+  telefono  String
+  email     String?
+  documento String?
+  createdAt DateTime @default(now())
+
+  ordenes OrdenReparacion[]
+
+  @@index([tenantId])
+  @@index([tenantId, telefono])
+  @@map("clientes")
+}
+
+model OrdenReparacion {
+  id        String   @id @default(uuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+
+  marca            String
+  modelo           String
+  imei             String?
+  color            String?
+  accesoriosRecibidos String? // ej: cargador, funda, sim
+  fallaReportada   String
+
+  estado           EstadoOrden @default(RECEPCION)
+  diagnostico      String?
+  presupuestoReparacion Decimal? @db.Decimal(10, 2)
+  estadoPresupuesto EstadoPresupuesto @default(PENDIENTE)
+  fechaAceptacionPresupuesto DateTime?
+  observaciones    String?
+
+  // costos: costoRepuestos se calcula normalmente a partir de ItemRepuesto,
+  // pero se deja también el agregado aquí para lectura rápida en reportes.
+  costoRepuestos   Decimal  @default(0) @db.Decimal(10, 2)
+  precioCobrado    Decimal? @db.Decimal(10, 2)
+
+  fechaRecepcion   DateTime  @default(now())
+  fechaDiagnostico DateTime?
+  fechaReparado    DateTime?
+  fechaEntrega     DateTime?
+
+  tecnicoId        String?
+  tecnico          Usuario?  @relation("tecnico", fields: [tecnicoId], references: [id])
+  recepcionistaId  String?
+  recepcionista    Usuario?  @relation("recepcionista", fields: [recepcionistaId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fotos      FotoOrden[]
+  historial  HistorialEstado[]
+  repuestos  ItemRepuesto[]
+
+  @@index([tenantId])
+  @@index([tenantId, estado])
+  @@index([tenantId, marca, modelo])
+  @@index([tenantId, fechaRecepcion])
+  @@map("ordenes_reparacion")
+}
+
+model ItemRepuesto {
+  id       String  @id @default(uuid())
+  ordenId  String
+  orden    OrdenReparacion @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  nombre   String
+  costo    Decimal @db.Decimal(10, 2)
+  cantidad Int     @default(1)
+
+  @@index([ordenId])
+  @@map("items_repuesto")
+}
+
+model FotoOrden {
+  id        String   @id @default(uuid())
+  ordenId   String
+  orden     OrdenReparacion @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  url       String   // ruta en almacenamiento tipo S3/R2, nunca el binario
+  tipo      TipoFoto
+  createdAt DateTime @default(now())
+
+  @@index([ordenId])
+  @@map("fotos_orden")
+}
+
+model HistorialEstado {
+  id             String   @id @default(uuid())
+  ordenId        String
+  orden          OrdenReparacion @relation(fields: [ordenId], references: [id], onDelete: Cascade)
+  estadoAnterior String
+  estadoNuevo    String
+  usuarioId      String
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id])
+  nota           String?
+  // true = el cliente puede ver esta nota en la página pública de seguimiento.
+  // false (por defecto) = nota interna del taller.
+  visibleCliente Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([ordenId])
+  @@map("historial_estados")
+}
+
+// ----------------------------------------------------------------------------
+// Auditoría de seguridad (independiente del historial de negocio)
+// ----------------------------------------------------------------------------
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  tenant    Tenant?  @relation(fields: [tenantId], references: [id])
+  usuarioId String?
+  usuario   Usuario? @relation(fields: [usuarioId], references: [id])
+  accion    String   // LOGIN_OK, LOGIN_FAIL, CAMBIO_ROL, EXPORT_REPORTE, etc.
+  entidad   String?
+  entidadId String?
+  ip        String?
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}
+
+
+model ReporteIA {
+  id              String   @id @default(uuid())
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  periodoInicio   DateTime
+  periodoFin      DateTime
+  estado          EstadoReporteIA @default(PENDIENTE)
+  resumenTexto    String?
+  metricasInput   Json?
+  solicitadoPorId String
+  solicitadoPor   Usuario  @relation(fields: [solicitadoPorId], references: [id])
+  error           String?
+  createdAt       DateTime @default(now())
+  completadoAt    DateTime?
+
+  @@index([tenantId, createdAt])
+  @@map("reportes_ia")
+}
+
+model EmailLog {
+  id           String      @id @default(uuid())
+  tenantId     String?
+  tenant       Tenant?     @relation(fields: [tenantId], references: [id])
+  destinatario String
+  asunto       String
+  estado       EstadoEmail @default(PENDIENTE)
+  error        String?
+  createdAt    DateTime    @default(now())
+  enviadoAt    DateTime?
+
+  @@index([tenantId, estado])
+  @@map("email_logs")
+}

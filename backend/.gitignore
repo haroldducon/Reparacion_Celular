@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# Secretos: jamás al repositorio
+.env
+.env.*
+!.env.example
+
+# Fotos de clientes: nunca al repositorio
+uploads/*
+!uploads/.gitkeep
+
+.DS_Store
+Thumbs.db
+*.log
