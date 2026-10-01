@@ -4,13 +4,21 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { UsuarioAutenticado } from '../common/decorators/current-user.decorator';
 import { PrismaService } from '../prisma/prisma.service';
 
+function obtenerSecretoJwt(): string {
+  const secreto = process.env.JWT_ACCESS_SECRET;
+  if (!secreto) {
+    throw new Error('JWT_ACCESS_SECRET no está definido en las variables de entorno');
+  }
+  return secreto;
+}
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private prisma: PrismaService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET,
+      secretOrKey: obtenerSecretoJwt(),
       algorithms: ['HS256'],
     });
   }
