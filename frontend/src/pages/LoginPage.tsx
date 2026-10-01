@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Eye, EyeOff, PackageCheck, Search, Wrench } from 'lucide-react';
 import { useAuth } from '../lib/auth-context';
+import { Footer } from '../components/Footer';
 
 const CAMPO =
   'w-full rounded-xl border border-[#e3dfd9] bg-white px-3 py-2.5 text-sm text-[#302d2e] outline-none transition placeholder:text-[#aaa39b] focus:border-[#c77945] focus:ring-2 focus:ring-[#c77945]/15 disabled:cursor-not-allowed disabled:bg-[#efede9]';
@@ -66,7 +67,8 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#211f20] px-3 py-6 sm:px-6">
+    <div className="flex min-h-screen flex-col bg-[#211f20]">
+    <main className="flex flex-1 items-center justify-center px-3 py-6 sm:px-6">
       <div className="grid w-full max-w-[1040px] overflow-hidden rounded-[28px] bg-[#2b292a] shadow-[0_24px_60px_rgba(0,0,0,0.35)] lg:grid-cols-[1.05fr_0.95fr]">
         {/* Panel informativo */}
         <aside
@@ -283,5 +285,7 @@ export function LoginPage() {
         </section>
       </div>
     </main>
+    <Footer variante="oscuro" />
+    </div>
   );
 }

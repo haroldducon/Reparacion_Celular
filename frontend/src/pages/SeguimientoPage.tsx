@@ -15,6 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { api, urlFoto } from '../lib/api';
+import { Footer } from '../components/Footer';
 
 interface SeguimientoData {
   id: string;
@@ -359,6 +360,7 @@ export function SeguimientoPage() {
           </div>
         )}
       </main>
+      <Footer variante="oscuro" className="mt-2" />
     </div>
   );
 }

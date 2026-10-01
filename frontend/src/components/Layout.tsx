@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/auth-context';
+import { Footer } from './Footer';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Panel', icon: LayoutDashboard, roles: ['ADMIN', 'TECNICO', 'RECEPCION', 'SUPER_ADMIN'] },
@@ -124,8 +125,11 @@ export function Layout() {
         </div>
       </aside>
 
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
-        <Outlet />
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-3 sm:p-4 lg:p-5">
+        <div className="flex-1">
+          <Outlet />
+        </div>
+        <Footer />
       </main>
     </div>
   );
