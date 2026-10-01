@@ -39,7 +39,7 @@ export function Layout() {
   });
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#e8e5e0] sm:flex-row">
+    <div className="flex h-screen flex-col bg-[#e8e5e0] sm:flex-row">
       <aside
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
@@ -125,12 +125,12 @@ export function Layout() {
         </div>
       </aside>
 
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-3 sm:p-4 lg:p-5">
-        <div className="flex-1">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 lg:p-5">
           <Outlet />
-        </div>
+        </main>
         <Footer />
-      </main>
+      </div>
     </div>
   );
 }

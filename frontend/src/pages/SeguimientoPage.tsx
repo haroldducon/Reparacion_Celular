@@ -113,7 +113,8 @@ export function SeguimientoPage() {
     : [];
 
   return (
-    <div className="min-h-screen bg-[#211f20] px-3 py-6 sm:px-6 sm:py-10">
+    <div className="flex min-h-screen flex-col bg-[#211f20]">
+      <div className="flex-1 px-3 py-6 sm:px-6 sm:py-10">
       <main className="mx-auto max-w-[760px] rounded-[28px] bg-[#2b292a] p-4 text-white sm:p-6">
         <header className="px-1">
           <p className="text-xs font-medium uppercase tracking-[0.15em] text-[#e7a16a]">Seguimiento de reparación</p>
@@ -360,7 +361,8 @@ export function SeguimientoPage() {
           </div>
         )}
       </main>
-      <Footer variante="oscuro" className="mt-2" />
+      </div>
+      <Footer variante="oscuro" fijo />
     </div>
   );
 }

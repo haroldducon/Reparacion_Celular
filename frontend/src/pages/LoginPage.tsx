@@ -285,7 +285,7 @@ export function LoginPage() {
         </section>
       </div>
     </main>
-    <Footer variante="oscuro" />
+    <Footer variante="oscuro" fijo />
     </div>
   );
 }
