@@ -38,7 +38,7 @@ export function OrdenDetallePage() {
   useEffect(() => {
     if (!orden) return;
     setDiagnostico(orden.diagnostico ?? '');
-    setPresupuestoReparacion(orden.presupuestoReparacion ?? '');
+    setPresupuestoReparacion(String(orden.presupuestoReparacion ?? ''));
     setRepuestos((orden.repuestos ?? []).map((repuesto) => ({
       nombre: repuesto.nombre,
       costo: repuesto.costo,
