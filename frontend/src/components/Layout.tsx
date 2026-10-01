@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { NavLink, Outlet } from 'react-router-dom';
 import {
@@ -31,6 +31,20 @@ export function Layout() {
   const { usuario, logout } = useAuth();
   const [expanded, setExpanded] = useState(false);
 
+  // El panel ya gestiona su propio scroll (columna derecha), así que se anula el scroll general
+  // de la página mientras este layout está montado. Evita la segunda barra lateral.
+  useEffect(() => {
+    const html = document.documentElement;
+    const previoHtml = html.style.overflow;
+    const previoBody = document.body.style.overflow;
+    html.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      html.style.overflow = previoHtml;
+      document.body.style.overflow = previoBody;
+    };
+  }, []);
+
   const { data: tenant } = useQuery({
     queryKey: ['tenant'],
     queryFn: () => api.get('/tenant').then((r) => r.data),
@@ -39,7 +53,7 @@ export function Layout() {
   });
 
   return (
-    <div className="flex h-screen flex-col bg-[#e8e5e0] sm:flex-row">
+    <div className="fixed inset-0 flex flex-col bg-[#e8e5e0] sm:flex-row">
       <aside
         onMouseEnter={() => setExpanded(true)}
         onMouseLeave={() => setExpanded(false)}
@@ -47,7 +61,7 @@ export function Layout() {
         onBlurCapture={(event) => {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setExpanded(false);
         }}
-        className={`z-20 flex w-full shrink-0 flex-row items-center bg-[#242223] text-white shadow-[0_8px_24px_rgba(20,18,18,0.18)] transition-[width] duration-300 ease-in-out sm:min-h-screen sm:flex-col sm:overflow-hidden sm:shadow-[8px_0_28px_rgba(20,18,18,0.16)] ${
+        className={`z-20 flex w-full shrink-0 flex-row items-center bg-[#242223] text-white shadow-[0_8px_24px_rgba(20,18,18,0.18)] transition-[width] duration-300 ease-in-out sm:h-full sm:flex-col sm:overflow-hidden sm:shadow-[8px_0_28px_rgba(20,18,18,0.16)] ${
           expanded ? 'sm:w-60' : 'sm:w-[72px]'
         }`}
       >
